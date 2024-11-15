@@ -14,15 +14,18 @@ int fingerNum = -1;
 
 static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData ZWImgData)
 {
-    qDebug() << "接收到图像回调";
+    qDebug() << "Panggilan balik gambar diterima";
+
+    qDebug() << "hasil is init device" << isInitDevice;
+
 #if 1
     if(!isInitDevice)
         return -1;
 
     emit mythis->signal_settip("Acquisition mode：" + QString::number(regmode));
-    emit mythis->signal_settip("FingerCount：" + QString::number(ZWImgData.FingerCount));
-    emit mythis->signal_settip("FingerLR：" + QString::number(ZWImgData.FingerLR));
-    emit mythis->signal_settip("FingerEdge：" + QString::number(ZWImgData.FingerEdge));
+    emit mythis->signal_settip("FingerCount：" + QString::number(ZWImgData.FingerCount)); //jumlah sidik jari yang terdeteksi
+    emit mythis->signal_settip("FingerLR：" + QString::number(ZWImgData.FingerLR)); //posisi jari
+    emit mythis->signal_settip("FingerEdge：" + QString::number(ZWImgData.FingerEdge)); // jarak tepi
 
     bool issucc = true;
     QList<QLabel> lblist;
@@ -218,7 +221,7 @@ void MainWindow::createfolder(const QString &Name)
 
 
 
-
+//init device
 void MainWindow::on_pushButton_clicked()
 {
     ZWDeviceInitParam  ptInfo = {};
@@ -242,6 +245,7 @@ void MainWindow::on_pushButton_clicked()
     }
 }
 
+//uninit device
 void MainWindow::on_pushButton_2_clicked()
 {
    int ret = MV1088_UninitDevice();
@@ -257,6 +261,7 @@ void MainWindow::on_pushButton_2_clicked()
    }
 }
 
+//empat tangan kiri
 void MainWindow::on_pushButton_3_clicked()
 {
     if(!isInitDevice)
@@ -278,6 +283,7 @@ void MainWindow::on_pushButton_3_clicked()
     }
 }
 
+//empat tangan kanan
 void MainWindow::on_pushButton_4_clicked()
 {
     if(!isInitDevice)
@@ -300,6 +306,7 @@ void MainWindow::on_pushButton_4_clicked()
     }
 }
 
+//2 jempol
 void MainWindow::on_pushButton_5_clicked()
 {
     if(!isInitDevice)
@@ -322,6 +329,7 @@ void MainWindow::on_pushButton_5_clicked()
     }
 }
 
+//stop capture success
 void MainWindow::on_pushButton_6_clicked()
 {
     if(!isInitDevice)
