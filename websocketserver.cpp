@@ -1,11 +1,14 @@
 #include "websocketserver.h"
-#include "mainwindow.h" // Include MainWindow untuk akses fungsi
+#include "mainwindow.h"
+#include <QWebSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     : QObject(parent),
       m_webSocketServer(new QWebSocketServer(QStringLiteral("My Server"),
                                              QWebSocketServer::NonSecureMode, this)),
-      m_mainWindow(mainWindow) // Inisialisasi pointer MainWindow
+      m_mainWindow(mainWindow)
 {
     if (m_webSocketServer->listen(QHostAddress::Any, 8080)) {
         qDebug() << "WebSocket server started on port 8080";
@@ -22,7 +25,7 @@ void WebSocketServer::onNewConnection() {
         qDebug() << "New client connected:" << clientSocket->peerAddress().toString();
         m_clients.append(clientSocket);
 
-        connect(clientSocket, &QWebSocket::textMessageReceived, this, &WebSocketServer::onTextMessageReceived);
+        connect(clientSocket, &QWebSocket::textMessageReceived, this, &WebSocketServer::onTextMessageReceived);  // Menghubungkan sinyal ke slot yang benar
         connect(clientSocket, &QWebSocket::disconnected, this, &WebSocketServer::onDisconnected);
     } else {
         qWarning() << "Failed to retrieve the new client connection.";
@@ -40,44 +43,6 @@ void WebSocketServer::onDisconnected() {
     }
 }
 
-WebSocketServer::~WebSocketServer() {
-    if (m_webSocketServer) {
-        m_webSocketServer->close();
-    }
-    qDeleteAll(m_clients);
-    qDebug() << "WebSocket server stopped and all clients disconnected";
-}
-
-void WebSocketServer::processMessage(const QString &message) {
-    qDebug() << "Received message:" << message;
-    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-
-    if (doc.isObject()) {
-        QJsonObject obj = doc.object();
-        QString command = obj["command"].toString();  // Ambil perintah dari pesan
-
-        if (command == "initdevice") {
-            // Memanggil fungsi initdevice di MainWindow
-            if (m_mainWindow) {
-                m_mainWindow->on_pushButton_clicked();  // Memanggil tombol InitDevice dari MainWindow
-            }
-            sendResponse("InitDevice success", 0);
-        }
-        else if (command == "uninitdevice") {
-            // Memanggil fungsi uninitdevice di MainWindow
-            if (m_mainWindow) {
-                m_mainWindow->on_pushButton_2_clicked();  // Memanggil tombol UninitDevice dari MainWindow
-            }
-            sendResponse("UninitDevice success", 0);
-        }
-        else {
-            sendResponse("Invalid command", -1);  // Kirim response jika perintah tidak valid
-        }
-    } else {
-        sendResponse("Invalid JSON format", -1);  // Kirim response jika format JSON tidak valid
-    }
-}
-
 void WebSocketServer::sendResponse(const QString &message, int code) {
     QJsonObject responseObj;
     responseObj["message"] = message;
@@ -91,4 +56,41 @@ void WebSocketServer::sendResponse(const QString &message, int code) {
     }
 
     qDebug() << "Response sent:" << response;
+}
+
+void WebSocketServer::onTextMessageReceived(const QString &message) {
+    qDebug() << "Received message:" << message;
+    processMessage(message);  // Proses pesan yang diterima
+}
+
+void WebSocketServer::processMessage(const QString &message) {
+    qDebug() << "Processing message:" << message;
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+
+    if (doc.isObject()) {
+        QJsonObject obj = doc.object();
+        QString command = obj["command"].toString();  // Ambil perintah dari pesan
+
+        if (command == "initdevice") {
+            emit m_mainWindow->initDevice();  // Emit signal untuk init device
+            sendResponse("InitDevice success", 0);
+        }
+        else if (command == "uninitdevice") {
+            emit m_mainWindow->uninitDevice();  // Emit signal untuk uninit device
+            sendResponse("UninitDevice success", 0);
+        }
+        else {
+            sendResponse("Invalid command", -1);  // Kirim response jika perintah tidak valid
+        }
+    } else {
+        sendResponse("Invalid JSON format", -1);  // Kirim response jika format JSON tidak valid
+    }
+}
+
+WebSocketServer::~WebSocketServer() {
+    if (m_webSocketServer) {
+        m_webSocketServer->close();
+    }
+    qDeleteAll(m_clients);
+    qDebug() << "WebSocket server stopped and all clients disconnected";
 }

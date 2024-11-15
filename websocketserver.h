@@ -24,6 +24,7 @@ private slots:
     void processMessage(const QString &message);
 
 
+
 private:
 
     QWebSocketServer *m_webSocketServer;
