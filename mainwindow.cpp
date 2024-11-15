@@ -231,6 +231,32 @@ QString MainWindow::initDevice() {
 }
 
 
+QString MainWindow::uninitDevice() {
+    // Pastikan perangkat telah diinisialisasi sebelumnya
+    if (!isInitDevice) {
+        QString statusMessage = "Device not initialized.\n";
+        emit signal_settip(statusMessage);  // Kirim pesan ke antarmuka pengguna
+        return statusMessage;
+    }
+
+    int ret = MV1088_UninitDevice();  // Fungsi untuk un-inisialisasi perangkat
+
+    QString statusMessage = QString("UnInitDevice ret: %1").arg(ret);
+
+    if (ret == 0) {
+        statusMessage.prepend("UnInitDevice success\n");
+        isInitDevice = false;
+    } else {
+        statusMessage.prepend("UnInitDevice fail\n");
+    }
+
+    // Tampilkan status ke antarmuka pengguna
+    emit signal_settip(statusMessage);
+
+    return statusMessage;  // Kirim status kembali ke WebSocket
+}
+
+
 
 
 //MainWindow::MainWindow(QWidget *parent)

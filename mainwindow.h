@@ -19,6 +19,8 @@ public:
     void Addtip(const QString &tip);
     void createfolder(const QString& Name);
     QString initDevice();
+    QString uninitDevice();
+
 
 
 
