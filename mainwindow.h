@@ -25,7 +25,7 @@ public:
 signals:
     void signal_settip(const QString &tip);
 
-private slots:
+public slots:
     void on_pushButton_clicked();
 
     void on_pushButton_2_clicked();
