@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui websockets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -17,10 +17,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    websocketserver.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    websocketserver.h
 
 FORMS += \
     mainwindow.ui
@@ -30,13 +32,10 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-
-
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/ -lZW_Device
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/ -lZW_Device
 
 message("Library path: $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/")
-
 
 INCLUDEPATH += $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/include
 DEPENDPATH += $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/include
