@@ -4,7 +4,19 @@
 #include <MV1088_TYPE.h>
 #include <MV1088_API.h>
 #include <qdir.h>
+#include <QByteArray>
+#include <QBuffer>
+#include "websocketserver.h"
 
+
+
+QString imageToBase64(const QImage &image) {
+    QByteArray byteArray;
+    QBuffer buffer(&byteArray);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "jpg");  // Simpan sebagai PNG atau format lain
+    return byteArray.toBase64();
+}
 
 MainWindow *mythis;
 bool isInitDevice = false;
@@ -16,7 +28,6 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
 {
     qDebug() << "Panggilan balik gambar diterima";
 
-    qDebug() << "hasil is init device" << isInitDevice;
 
 #if 1
     if(!isInitDevice)
@@ -37,11 +48,12 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
         emit mythis->signal_settip("Y：" + QString::number(Detail.y));
         emit mythis->signal_settip("Image width：" + QString::number(Detail.width));
         emit mythis->signal_settip("Image height：" + QString::number(Detail.height));
-        if(Detail.quality < 50)
+        if(Detail.quality < 10)
             issucc = false;
     }
     if(regmode == 1)
     {
+
         if(ZWImgData.FingerCount == 2)
         {
             if(ZWImgData.FingerEdge == -1)
@@ -66,6 +78,24 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
                      QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
                      QString imagename = QString("./fingerimage/thumb_%1.jpg").arg(QString::number(i));
                      image.save(imagename);
+
+                      QString base64String = imageToBase64(image);
+
+
+                      qDebug() << "hasil base 64" << base64String;
+
+                      QString base64FileName = QString("./fingerimage/thumb_%1.txt").arg(QString::number(i));
+                      QFile base64File(base64FileName);
+                                     if (base64File.open(QIODevice::WriteOnly | QIODevice::Text))
+                                     {
+                                         QTextStream out(&base64File);
+                                         out << base64String;  // Simpan string Base64 ke file
+                                         base64File.close();
+                                     }
+                                     else
+                                     {
+                                         qDebug() << "Failed to open file for writing Base64:" << base64FileName;
+                                     }
 
                 }
                 QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
@@ -175,16 +205,55 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
 #endif
 }
 
+QString MainWindow::initDevice() {
+    ZWDeviceInitParam ptInfo = {};
+    ptInfo.modelPath = "./runs/subApps/";
+    ptInfo.iBright = 10;
+    ptInfo.iContrast = 70;
+    ptInfo.tCallBackPreview = (MV_CallbackPreviewImage)MYZW_CallbackPreviewImage;
 
+    int ret = MV1088_InitDevice(&ptInfo);
+    QString statusMessage = QString("InitDevice ret: %1").arg(ret);
+
+    if (ret == 0) {
+        statusMessage.prepend("InitDevice success\n");
+        isInitDevice = true;
+        HWND hwnd = (HWND)ui->label->winId();
+        MV1088_SetVideoWindow(hwnd);
+    } else {
+        statusMessage.prepend("InitDevice fail\n");
+    }
+
+    // Tampilkan di antarmuka pengguna
+    emit signal_settip(statusMessage);
+
+    return statusMessage; // Kirim status kembali ke WebSocket
+}
+
+
+
+
+//MainWindow::MainWindow(QWidget *parent)
+//    : QMainWindow(parent)
+//    , ui(new Ui::MainWindow)
+//    , websocketserver(new WebSocketServer(this))
+//{
+//    ui->setupUi(this);
+//    mythis = this;
+//    this->setWindowTitle("MV1088Test");
+//    connect(this,&MainWindow::signal_settip,this,&MainWindow::Addtip);
+//    createfolder("fingerimage");
+//}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , websocketserver(new WebSocketServer(this, this))
 {
     ui->setupUi(this);
-    mythis = this;
+    mythis = this; // Masih digunakan untuk callback
     this->setWindowTitle("MV1088Test");
-    connect(this,&MainWindow::signal_settip,this,&MainWindow::Addtip);
+    connect(this, &MainWindow::signal_settip, this, &MainWindow::Addtip);
     createfolder("fingerimage");
 }
 

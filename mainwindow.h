@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <MV1088_API.h>
+#include "websocketserver.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -17,6 +18,8 @@ public:
     ~MainWindow();
     void Addtip(const QString &tip);
     void createfolder(const QString& Name);
+    QString initDevice();
+
 
 
 signals:
@@ -37,5 +40,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    WebSocketServer *websocketserver;
+
 };
 #endif // MAINWINDOW_H
