@@ -15,7 +15,6 @@ WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     }
 }
 
-
 void WebSocketServer::onNewConnection() {
     QWebSocket *clientSocket = m_webSocketServer->nextPendingConnection();
 
@@ -41,7 +40,6 @@ void WebSocketServer::onDisconnected() {
     }
 }
 
-
 WebSocketServer::~WebSocketServer() {
     if (m_webSocketServer) {
         m_webSocketServer->close();
@@ -50,28 +48,47 @@ WebSocketServer::~WebSocketServer() {
     qDebug() << "WebSocket server stopped and all clients disconnected";
 }
 
-void WebSocketServer::onTextMessageReceived(const QString &message) {
-    QWebSocket *clientSocket = qobject_cast<QWebSocket *>(sender());
-    if (clientSocket) {
-        qDebug() << "Message from client:" << message;
+void WebSocketServer::processMessage(const QString &message) {
+    qDebug() << "Received message:" << message;
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(message.toUtf8());
-        if (!jsonDoc.isObject()) {
-            clientSocket->sendTextMessage("Invalid message format");
-            return;
-        }
-
-        QJsonObject jsonObj = jsonDoc.object();
-        QString command = jsonObj.value("command").toString();
+    if (doc.isObject()) {
+        QJsonObject obj = doc.object();
+        QString command = obj["command"].toString();  // Ambil perintah dari pesan
 
         if (command == "initdevice") {
-            // Panggil fungsi initDevice di MainWindow
-            QString initResult = m_mainWindow->initDevice();
-            clientSocket->sendTextMessage(initResult);
-        } else {
-            clientSocket->sendTextMessage("Unknown command");
+            // Memanggil fungsi initdevice di MainWindow
+            if (m_mainWindow) {
+                m_mainWindow->on_pushButton_clicked();  // Memanggil tombol InitDevice dari MainWindow
+            }
+            sendResponse("InitDevice success", 0);
+        }
+        else if (command == "uninitdevice") {
+            // Memanggil fungsi uninitdevice di MainWindow
+            if (m_mainWindow) {
+                m_mainWindow->on_pushButton_2_clicked();  // Memanggil tombol UninitDevice dari MainWindow
+            }
+            sendResponse("UninitDevice success", 0);
+        }
+        else {
+            sendResponse("Invalid command", -1);  // Kirim response jika perintah tidak valid
         }
     } else {
-        qWarning() << "onTextMessageReceived called, but sender is not a QWebSocket";
+        sendResponse("Invalid JSON format", -1);  // Kirim response jika format JSON tidak valid
     }
+}
+
+void WebSocketServer::sendResponse(const QString &message, int code) {
+    QJsonObject responseObj;
+    responseObj["message"] = message;
+    responseObj["ret"] = code;  // Mengirimkan kode error, 0 untuk sukses, -1 untuk gagal
+
+    QJsonDocument doc(responseObj);
+    QString response = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+
+    for (QWebSocket *clientSocket : qAsConst(m_clients)) {
+        clientSocket->sendTextMessage(response);  // Mengirim pesan response ke semua klien
+    }
+
+    qDebug() << "Response sent:" << response;
 }

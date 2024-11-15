@@ -20,10 +20,12 @@ private slots:
     void onNewConnection();
     void onTextMessageReceived(const QString &message);
     void onDisconnected();
-
+    void sendResponse(const QString &message, int code);
+    void processMessage(const QString &message);
 
 
 private:
+
     QWebSocketServer *m_webSocketServer;
     QList<QWebSocket *> m_clients;
     MainWindow *m_mainWindow; // Pointer ke MainWindow
