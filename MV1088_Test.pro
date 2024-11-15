@@ -33,7 +33,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/ -lZW_Device
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/ -lZW_Deviced
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/ -lZW_Device
+
+message("Library path: $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/lib/")
+
 
 INCLUDEPATH += $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/include
 DEPENDPATH += $$PWD/fingerprints_sdk_x86_20241113_v1.0.0.2/include
