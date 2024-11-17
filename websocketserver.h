@@ -6,6 +6,7 @@
 #include <QWebSocket>
 #include <QJsonArray>
 #include <QList>
+#include "kamera.h"
 
 class MainWindow;
 
@@ -33,6 +34,7 @@ private:
     QWebSocketServer *m_webSocketServer;
     QList<QWebSocket *> m_clients; // Menyimpan klien yang terhubung
     MainWindow *m_mainWindow;      // Pointer ke MainWindow untuk interaksi
+    kamera *m_kamera;
 };
 
 #endif // WEBSOCKETSERVER_H

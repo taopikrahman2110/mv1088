@@ -126,7 +126,16 @@ void WebSocketServer::processMessage(const QString &message) {
                 int errorCode = extractErrorCode(result);
                 sendResponse("stopCapture fail", errorCode);
             }
-        } else {
+        } else if (command == "cekKoneksi"){
+            QString ip = obj["ip"].toString();  // Mengambil IP dari JSON
+
+            // Memanggil fungsi cekKoneksi pada objek kamera
+            kamera cam;
+            QString result = cam.cekKoneksi(ip);
+
+            // Mengirimkan hasil ping ke klien
+            sendResponse(result, 0);
+        }else {
             sendResponse("Invalid command", -1);
         }
     } else {
