@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <MV1088_API.h>
 #include "websocketserver.h"
-
+#include <qjsonarray.h>
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -21,12 +21,15 @@ public:
     QString initDevice();
     QString uninitDevice();
     QString thumbFinger();
+    void sendResponse(const QString &message, int code, const QJsonArray &fingerData = QJsonArray());
+
 
 
 
 
 signals:
     void signal_settip(const QString &tip);
+    void signal_sendFingerData(const QString &data, int statusCode, const QJsonArray &fingerData);
 
 public slots:
     void on_pushButton_clicked();

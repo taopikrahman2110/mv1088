@@ -7,8 +7,9 @@
 #include <QByteArray>
 #include <QBuffer>
 #include "websocketserver.h"
-
-
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 QString imageToBase64(const QImage &image) {
     QByteArray byteArray;
@@ -33,10 +34,14 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
     if(!isInitDevice)
         return -1;
 
+    QJsonArray fingerDataArray;
+
     emit mythis->signal_settip("Acquisition mode：" + QString::number(regmode));
     emit mythis->signal_settip("FingerCount：" + QString::number(ZWImgData.FingerCount)); //jumlah sidik jari yang terdeteksi
     emit mythis->signal_settip("FingerLR：" + QString::number(ZWImgData.FingerLR)); //posisi jari
     emit mythis->signal_settip("FingerEdge：" + QString::number(ZWImgData.FingerEdge)); // jarak tepi
+
+
 
     bool issucc = true;
     QList<QLabel> lblist;
@@ -48,7 +53,7 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
         emit mythis->signal_settip("Y：" + QString::number(Detail.y));
         emit mythis->signal_settip("Image width：" + QString::number(Detail.width));
         emit mythis->signal_settip("Image height：" + QString::number(Detail.height));
-        if(Detail.quality < 10)
+        if(Detail.quality < 30)
             issucc = false;
     }
     if(regmode == 1)
@@ -73,34 +78,42 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
             }
             if(issucc)
             {
+
+                QJsonArray fingerDataArray;
                 for(int i = 0;i < ZWImgData.FingerCount;i++)
                 {
-                     QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
-                     QString imagename = QString("./fingerimage/thumb_%1.jpg").arg(QString::number(i));
-                     image.save(imagename);
+                   // ZWFingerDetail Detail = ZWImgData.FingerDetails[i];
+                    QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
+                    QString imagename = QString("./fingerimage/thumb_%1.jpg").arg(QString::number(i));
+                    image.save(imagename);
 
-                      QString base64String = imageToBase64(image);
+                    QString base64String = imageToBase64(image);
 
 
-                      qDebug() << "hasil base 64" << base64String;
+                    qDebug() << "hasil base 64" << base64String;
 
-                      QString base64FileName = QString("./fingerimage/thumb_%1.txt").arg(QString::number(i));
-                      QFile base64File(base64FileName);
-                                     if (base64File.open(QIODevice::WriteOnly | QIODevice::Text))
-                                     {
-                                         QTextStream out(&base64File);
-                                         out << base64String;  // Simpan string Base64 ke file
-                                         base64File.close();
-                                     }
-                                     else
-                                     {
-                                         qDebug() << "Failed to open file for writing Base64:" << base64FileName;
-                                     }
+                    QString base64FileName = QString("./fingerimage/thumb_%1.txt").arg(QString::number(i));
+                    QFile base64File(base64FileName);
+                    if (base64File.open(QIODevice::WriteOnly | QIODevice::Text))
+                    {
+                        QTextStream out(&base64File);
+                        out << base64String;  // Simpan string Base64 ke file
+                        base64File.close();
+                    }
+                    else
+                    {
+                        qDebug() << "Failed to open file for writing Base64:" << base64FileName;
+                    }
+                    QJsonObject fingerData;
+                    fingerData["fingerFile"] = imagename;
+                    fingerData["base64Image"] = base64String;
+                    fingerDataArray.append(fingerData);
 
                 }
                 QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
                 image1.save("./fingerimage/raw.jpg");
                 emit mythis->signal_settip("Acquisition of two fingers was successful");
+                emit mythis->signal_sendFingerData("thumbFinger success", 0, fingerDataArray);
                 return 1;
             }
         }
@@ -134,9 +147,9 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
                 {
                     for(int i = 0;i < ZWImgData.FingerCount;i++)
                     {
-                         QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
-                         QString imagename = QString("./fingerimage/left_%1.jpg").arg(QString::number(i));
-                         image.save(imagename);
+                        QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
+                        QString imagename = QString("./fingerimage/left_%1.jpg").arg(QString::number(i));
+                        image.save(imagename);
 
                     }
                     QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
@@ -180,9 +193,9 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
                 {
                     for(int i = 0;i < ZWImgData.FingerCount;i++)
                     {
-                         QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
-                         QString imagename = QString("./fingerimage/right_%1.jpg").arg(QString::number(i));
-                         image.save(imagename);
+                        QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
+                        QString imagename = QString("./fingerimage/right_%1.jpg").arg(QString::number(i));
+                        image.save(imagename);
 
                     }
                     QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
@@ -285,6 +298,29 @@ QString MainWindow::thumbFinger() {
 }
 
 
+void MainWindow::sendResponse(const QString &message, int code, const QJsonArray &fingerData) {
+    QJsonObject response;
+    response["message"] = message;
+    response["code"] = code;
+
+    if (!fingerData.isEmpty()) {
+        response["fingerData"] = fingerData;
+    }
+
+    QJsonDocument doc(response);
+    QString jsonString = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+
+    // Kirim melalui WebSocketServer
+    if (websocketserver) {
+        websocketserver->broadcastMessage(jsonString);
+    } else {
+        qDebug() << "WebSocket server is not initialized";
+    }
+}
+
+
+
+
 
 
 
@@ -304,11 +340,16 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , websocketserver(new WebSocketServer(this, this))
+
 {
     ui->setupUi(this);
     mythis = this; // Masih digunakan untuk callback
     this->setWindowTitle("MV1088Test");
     connect(this, &MainWindow::signal_settip, this, &MainWindow::Addtip);
+    connect(this, &MainWindow::signal_sendFingerData, this, [this](const QString &message, int statusCode, const QJsonArray &fingerData) {
+        sendResponse(message, statusCode, fingerData);
+    });
+
     createfolder("fingerimage");
 }
 
@@ -365,24 +406,24 @@ void MainWindow::on_pushButton_clicked()
     }
     else
     {
-         signal_settip("InitDevice fail");
+        signal_settip("InitDevice fail");
     }
 }
 
 //uninit device
 void MainWindow::on_pushButton_2_clicked()
 {
-   int ret = MV1088_UninitDevice();
-   signal_settip("UninitDevice ret:"+QString::number(ret));
-   if(ret == 0)
-   {
-       signal_settip("UninitDevice success");
-       isInitDevice = false;
-   }
-   else
-   {
+    int ret = MV1088_UninitDevice();
+    signal_settip("UninitDevice ret:"+QString::number(ret));
+    if(ret == 0)
+    {
+        signal_settip("UninitDevice success");
+        isInitDevice = false;
+    }
+    else
+    {
         signal_settip("UninitDevice fail");
-   }
+    }
 }
 
 //empat tangan kiri
@@ -403,7 +444,7 @@ void MainWindow::on_pushButton_3_clicked()
     }
     else
     {
-         signal_settip("StartCapture fail");
+        signal_settip("StartCapture fail");
     }
 }
 
@@ -426,7 +467,7 @@ void MainWindow::on_pushButton_4_clicked()
     }
     else
     {
-         signal_settip("StartCapture fail");
+        signal_settip("StartCapture fail");
     }
 }
 
@@ -449,7 +490,7 @@ void MainWindow::on_pushButton_5_clicked()
     }
     else
     {
-         signal_settip("StartCapture fail");
+        signal_settip("StartCapture fail");
     }
 }
 
@@ -463,7 +504,7 @@ void MainWindow::on_pushButton_6_clicked()
     }
 
     int ret = MV1088_StopCapture();
-     signal_settip("StopCapture ret:"+QString::number(ret));
+    signal_settip("StopCapture ret:"+QString::number(ret));
     if(ret == 0)
     {
         signal_settip("StopCapture success");
@@ -472,6 +513,6 @@ void MainWindow::on_pushButton_6_clicked()
     }
     else
     {
-         signal_settip("StopCapture fail");
+        signal_settip("StopCapture fail");
     }
 }

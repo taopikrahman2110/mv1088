@@ -4,32 +4,35 @@
 #include <QObject>
 #include <QWebSocketServer>
 #include <QWebSocket>
-#include <QJsonObject>
-#include <QJsonDocument>
+#include <QJsonArray>
+#include <QList>
 
-class MainWindow; // Forward declaration
+class MainWindow;
 
 class WebSocketServer : public QObject
 {
     Q_OBJECT
+
 public:
-    explicit WebSocketServer(MainWindow *mainWindow, QObject *parent = nullptr); // Terima pointer ke MainWindow
+    explicit WebSocketServer(MainWindow *mainWindow, QObject *parent = nullptr);
     ~WebSocketServer();
+
+    void sendResponse(const QString &message, int code);
+    void broadcastMessage(const QString &message);
 
 private slots:
     void onNewConnection();
-    void onTextMessageReceived(const QString &message);
     void onDisconnected();
-    void sendResponse(const QString &message, int code);
-    void processMessage(const QString &message);
-
+    void onTextMessageReceived(const QString &message);
 
 
 private:
+    void processMessage(const QString &message);
+    int extractErrorCode(const QString &response);
 
     QWebSocketServer *m_webSocketServer;
-    QList<QWebSocket *> m_clients;
-    MainWindow *m_mainWindow; // Pointer ke MainWindow
+    QList<QWebSocket *> m_clients; // Menyimpan klien yang terhubung
+    MainWindow *m_mainWindow;      // Pointer ke MainWindow untuk interaksi
 };
 
 #endif // WEBSOCKETSERVER_H
