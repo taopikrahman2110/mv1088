@@ -134,14 +134,73 @@ void WebSocketServer::processMessage(const QString &message) {
             sendResponse(result, 0);
         } else if (command == "takePhoto") {
             if (m_kamera) {
+                QString ip = obj["ip"].toString();
                 // Menyambungkan sinyal photoTaken ke slot sendResponseKamera untuk menangani hasil foto
+                disconnect(m_kamera, &kamera::photoTaken, this, &WebSocketServer::sendResponseKamera);
                 connect(m_kamera, &kamera::photoTaken, this, &WebSocketServer::sendResponseKamera);
 
-                m_kamera->takePhoto();
+
+                m_kamera->takePhoto(ip);
+                m_kamera->cancelPhoto(ip);
+            } else {
+                sendResponseKamera(QJsonObject(), -1);  // Jika kamera tidak tersedia
+            }
+        }else if (command == "getPhoto")
+        {
+            if (m_kamera) {
+                // Ambil IP dan path dari JSON objek
+                QString ip = obj["ip"].toString();
+                QString path = obj["path"].toString();
+
+                // Validasi data IP dan path
+                if (ip.isEmpty() || path.isEmpty()) {
+                    qDebug() << "Invalid IP or path received from user";
+                    sendResponseKamera(QJsonObject(), -1); // Kirim error jika data tidak valid
+                    return;
+                }
+
+                // Pastikan koneksi sinyal tidak terduplikasi (seharusnya hanya sekali di dalam konstruktor atau setup)
+                if (!m_photoFetchedConnected) {
+                    connect(m_kamera, &kamera::photoFetched, this, [this](const QByteArray &data, int status) {
+                        if (status == 0) {
+                            // Kirim data biner jika berhasil
+                            if (m_webSocket) {
+                                qDebug() << "Sending binary photo data to the client";
+                                m_webSocket->sendBinaryMessage(data); // Kirim data biner
+                            }
+                        } else {
+                            // Kirim pesan error dalam bentuk teks jika gagal
+                            QJsonObject response;
+                            response["error"] = "Failed to fetch photo.";
+                            sendResponseKamera(response, status);
+                        }
+                    });
+                    m_photoFetchedConnected = true;
+                }
+
+                // Panggil fungsi getPhoto pada kamera
+                m_kamera->getPhoto(path, ip);
+
+            } else {
+                qDebug() << "Camera object not available";
+                sendResponseKamera(QJsonObject(), -1); // Kirim error jika kamera tidak tersedia
+            }
+        }else if (command == "setDisplay"){
+            if (m_kamera) {
+                QString ip = obj["ip"].toString();
+                QString show_contents = obj["show_contents"].toString();
+                // Menyambungkan sinyal photoTaken ke slot sendResponseKamera untuk menangani hasil foto
+                disconnect(m_kamera, &kamera::setDisplayed, this, &WebSocketServer::sendResponseKamera);
+                connect(m_kamera, &kamera::setDisplayed, this, &WebSocketServer::sendResponseKamera);
+
+
+                m_kamera->setDisplay(ip, show_contents);
             } else {
                 sendResponseKamera(QJsonObject(), -1);  // Jika kamera tidak tersedia
             }
         }
+
+
 
 
 

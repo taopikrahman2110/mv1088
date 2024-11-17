@@ -17,6 +17,7 @@ class WebSocketServer : public QObject
 public:
     explicit WebSocketServer(MainWindow *mainWindow, QObject *parent = nullptr);
     ~WebSocketServer();
+    QWebSocket *m_webSocket;
 
     void sendResponse(const QString &message, int code);
     void sendResponseKamera(QJsonObject jsonObj, int code);
@@ -36,6 +37,7 @@ private:
     QList<QWebSocket *> m_clients; // Menyimpan klien yang terhubung
     MainWindow *m_mainWindow;      // Pointer ke MainWindow untuk interaksi
     kamera *m_kamera;
+    bool m_photoFetchedConnected = false;
 };
 
 #endif // WEBSOCKETSERVER_H
