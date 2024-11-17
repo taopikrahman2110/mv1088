@@ -23,6 +23,7 @@ public:
     QString thumbFinger();
     QString leftFourFinger();
     QString rightFourFinger();
+    QString stopCapture();
 
     void sendResponse(const QString &message, int code, const QJsonArray &fingerData = QJsonArray());
 
