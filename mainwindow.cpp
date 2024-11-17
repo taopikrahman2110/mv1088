@@ -266,13 +266,14 @@ QString MainWindow::thumbFinger() {
 
     // Misalkan Anda memiliki metode untuk menangkap gambar
     int ret = MV1088_StartCapture(2);
-
+    signal_settip("StartCapture ret:"+QString::number(ret));
     QString statusMessage = QString("CaptureThumbs ret: %1").arg(ret);
 
     if (ret == 0) {
         statusMessage.prepend("CaptureThumbs success\n");
-        // Menyimpan atau menampilkan gambar hasil capture
-        // Anda bisa memanipulasi gambar dan menampilkannya di UI
+        signal_settip("StartCapture success");
+        regmode = 1;
+
     } else {
         statusMessage.prepend("CaptureThumbs fail\n");
     }

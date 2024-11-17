@@ -136,6 +136,25 @@ void WebSocketServer::processMessage(const QString &message) {
                 // Kirim respons gagal dengan kode error yang sesuai
                 sendResponse("UnInitDevice fail", errorCode);
             }
+        } else if (command == "thumbFinger") {
+            // Panggil fungsi thumbFinger untuk mendapatkan hasil
+            QString result = m_mainWindow->thumbFinger();
+
+            if (result.contains("Device not initialized")) {
+                // Jika perangkat belum diinisialisasi, kirim respons dengan kode -2
+                sendResponse("Device not initialized", -2);
+            } else if (result.contains("success")) {
+                // Jika berhasil, kirim respons sukses
+                sendResponse("thumbFinger success", 0);
+            } else if (result.contains("fail")) {
+                // Jika gagal, ekstrak kode error dari hasil string
+                QRegularExpression re("ret: (-?\\d+)");
+                QRegularExpressionMatch match = re.match(result);
+                int errorCode = match.hasMatch() ? match.captured(1).toInt() : -1;
+
+                // Kirim respons gagal dengan kode error yang sesuai
+                sendResponse("thumbFinger fail", errorCode);
+            }
         } else {
             sendResponse("Invalid command", -1); // Kirim response jika perintah tidak valid
         }
