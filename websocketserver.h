@@ -19,6 +19,7 @@ public:
     ~WebSocketServer();
 
     void sendResponse(const QString &message, int code);
+    void sendResponseKamera(QJsonObject jsonObj, int code);
     void broadcastMessage(const QString &message);
 
 private slots:

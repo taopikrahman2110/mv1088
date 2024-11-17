@@ -10,7 +10,8 @@ WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     : QObject(parent),
       m_webSocketServer(new QWebSocketServer(QStringLiteral("My Server"),
                                              QWebSocketServer::NonSecureMode, this)),
-      m_mainWindow(mainWindow)
+      m_mainWindow(mainWindow),
+      m_kamera(new kamera(this))
 {
     if (m_webSocketServer->listen(QHostAddress::Any, 8080)) {
         qDebug() << "WebSocket server started on port 8080";
@@ -127,21 +128,57 @@ void WebSocketServer::processMessage(const QString &message) {
                 sendResponse("stopCapture fail", errorCode);
             }
         } else if (command == "cekKoneksi"){
-            QString ip = obj["ip"].toString();  // Mengambil IP dari JSON
-
-            // Memanggil fungsi cekKoneksi pada objek kamera
+            QString ip = obj["ip"].toString();
             kamera cam;
             QString result = cam.cekKoneksi(ip);
-
-            // Mengirimkan hasil ping ke klien
             sendResponse(result, 0);
-        }else {
+        } else if (command == "takePhoto") {
+            if (m_kamera) {
+                // Menyambungkan sinyal photoTaken ke slot sendResponseKamera untuk menangani hasil foto
+                connect(m_kamera, &kamera::photoTaken, this, &WebSocketServer::sendResponseKamera);
+
+                m_kamera->takePhoto();
+            } else {
+                sendResponseKamera(QJsonObject(), -1);  // Jika kamera tidak tersedia
+            }
+        }
+
+
+
+
+        else {
             sendResponse("Invalid command", -1);
         }
     } else {
         sendResponse("Invalid JSON format", -1);
     }
 }
+
+
+void WebSocketServer::sendResponseKamera(QJsonObject jsonObj, int code) {
+    // Membuat response object dengan message berupa jsonObj
+    QJsonObject response;
+    response["message"] = jsonObj;  // Menyisipkan objek JSON sebagai bagian dari response
+    response["ret"] = code;
+
+    // Mengonversi objek response menjadi string JSON dalam format Compact
+    QJsonDocument doc(response);
+    QString jsonString = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+
+    // Mengirimkan response JSON ke semua klien WebSocket yang terhubung
+    for (QWebSocket *clientSocket : qAsConst(m_clients)) {
+        if (clientSocket->isValid()) {
+            clientSocket->sendTextMessage(jsonString);  // Kirim JSON string ke WebSocket
+        }
+    }
+
+    // Debug log untuk memastikan JSON telah dikirim
+    qDebug() << "Response sent:" << jsonString;
+}
+
+
+
+
 
 void WebSocketServer::sendResponse(const QString &message, int code) {
     QJsonObject responseObj;
