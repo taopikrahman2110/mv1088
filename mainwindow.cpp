@@ -214,14 +214,36 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
                 {
                     for(int i = 0;i < ZWImgData.FingerCount;i++)
                     {
+                       ZWFingerDetail Detail = ZWImgData.FingerDetails[i];
+
                         QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
                         QString imagename = QString("./fingerimage/right_%1.jpg").arg(QString::number(i));
                         image.save(imagename);
+
+                        QString base64String = imageToBase64(image);
+                        QString base64FileName = QString("./fingerimage/right_%1.txt").arg(QString::number(i));
+
+                        QFile base64File(base64FileName);
+                        if (base64File.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                            QTextStream out(&base64File);
+                            out << base64String;  // Simpan string Base64 ke file
+                            base64File.close();
+                        } else {
+                            qDebug() << "Failed to open file for writing Base64:" << base64FileName;
+                        }
+                        QJsonObject fingerData;
+                        fingerData["fingerFile"] = imagename;
+                        fingerData["base64Image"] = base64String;
+                        fingerData["quality"] = Detail.quality;  // Menyertakan kualitas sidik jari
+                        fingerData["fingerName"] = QString("right_%1").arg(QString::number(i));
+                        fingerDataArray.append(fingerData);
 
                     }
                     QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
                     image1.save("./fingerimage/raw.jpg");
                     emit mythis->signal_settip("The collection of the four fingers of the right hand was successful");
+                    emit mythis->signal_sendFingerData("rightFinger success", 0, fingerDataArray);
+
                     return 1;
                 }
             }
@@ -345,6 +367,62 @@ QString MainWindow::leftFourFinger() {
 
     return statusMessage;  // Kirim status kembali ke WebSocket
 }
+
+QString MainWindow::rightFourFinger() {
+    // Periksa apakah perangkat telah diinisialisasi sebelumnya
+    if (!isInitDevice) {
+        QString statusMessage = "Device not initialized.\n";
+        emit signal_settip(statusMessage);  // Kirim pesan ke UI
+        return statusMessage;
+    }
+
+    // Misalkan Anda memiliki metode untuk menangkap gambar
+    int ret = MV1088_StartCapture(1);
+    signal_settip("StartCapture ret:"+QString::number(ret));
+    QString statusMessage = QString("rightFourFinger ret: %1").arg(ret);
+
+    if (ret == 0) {
+        statusMessage.prepend("rightFourFinger success\n");
+        signal_settip("StartCapture success");
+        regmode = 3;
+
+    } else {
+        statusMessage.prepend("rightFourFinger fail\n");
+    }
+
+    // Tampilkan status di UI
+    emit signal_settip(statusMessage);
+
+    return statusMessage;  // Kirim status kembali ke WebSocket
+}
+
+QString MainWindow::stopCapture() {
+    if (!isInitDevice) {
+        QString statusMessage = "Device not initialized.\n";
+        emit signal_settip(statusMessage);  // Kirim pesan ke UI
+        return statusMessage;
+    }
+
+    // Misalkan Anda memiliki metode untuk menangkap gambar
+    int ret = MV1088_StopCapture();
+    signal_settip("StopCapture ret:"+QString::number(ret));
+    QString statusMessage = QString("StopCapture ret: %1").arg(ret);
+
+    if (ret == 0) {
+        statusMessage.prepend("StopCapture success\n");
+        signal_settip("StopCapture success");
+        regmode = -1;
+
+    } else {
+        statusMessage.prepend("rightFourFinger fail\n");
+    }
+
+    // Tampilkan status di UI
+    emit signal_settip(statusMessage);
+
+    return statusMessage;  // Kirim status kembali ke WebSocket
+}
+
 
 
 

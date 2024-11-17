@@ -106,6 +106,26 @@ void WebSocketServer::processMessage(const QString &message) {
                 int errorCode = extractErrorCode(result);
                 sendResponse("leftFourFinger fail", errorCode);
             }
+        } else if (command == "rightFourFinger") {
+            QString result = m_mainWindow->rightFourFinger();
+            if (result.contains("Device not initialized")) {
+                sendResponse("Device not initialized", -2);
+            } else if (result.contains("success")) {
+                sendResponse("rightFourFinger success", 0);
+            } else {
+                int errorCode = extractErrorCode(result);
+                sendResponse("rightFourFinger fail", errorCode);
+            }
+        } else if (command == "stopCapture") {
+            QString result = m_mainWindow->stopCapture();
+            if (result.contains("Device not initialized")) {
+                sendResponse("Device not initialized", -2);
+            } else if (result.contains("success")) {
+                sendResponse("stopCapture success", 0);
+            } else {
+                int errorCode = extractErrorCode(result);
+                sendResponse("stopCapture fail", errorCode);
+            }
         } else {
             sendResponse("Invalid command", -1);
         }
