@@ -37,91 +37,89 @@ static int CALLBACK MYZW_CallbackPreviewImage(void *pContext, const ZWImageData 
     QJsonArray fingerDataArray;
 
     emit mythis->signal_settip("Acquisition mode：" + QString::number(regmode));
-    emit mythis->signal_settip("FingerCount：" + QString::number(ZWImgData.FingerCount)); //jumlah sidik jari yang terdeteksi
-    emit mythis->signal_settip("FingerLR：" + QString::number(ZWImgData.FingerLR)); //posisi jari
+    emit mythis->signal_settip("FingerCount：" + QString::number(ZWImgData.FingerCount)); // jumlah sidik jari yang terdeteksi
+    emit mythis->signal_settip("FingerLR：" + QString::number(ZWImgData.FingerLR)); // posisi jari
     emit mythis->signal_settip("FingerEdge：" + QString::number(ZWImgData.FingerEdge)); // jarak tepi
-
-
 
     bool issucc = true;
     QList<QLabel> lblist;
-    for(int i = 0;i < ZWImgData.FingerCount;i++)
-    {
-        ZWFingerDetail  Detail = ZWImgData.FingerDetails[i];
+
+    // Proses semua detail sidik jari yang terdeteksi
+    for (int i = 0; i < ZWImgData.FingerCount; i++) {
+        ZWFingerDetail Detail = ZWImgData.FingerDetails[i];
+
         emit mythis->signal_settip("Finger quality：" + QString::number(Detail.quality));
         emit mythis->signal_settip("X：" + QString::number(Detail.x));
         emit mythis->signal_settip("Y：" + QString::number(Detail.y));
         emit mythis->signal_settip("Image width：" + QString::number(Detail.width));
         emit mythis->signal_settip("Image height：" + QString::number(Detail.height));
-        if(Detail.quality < 30)
-            issucc = false;
-    }
-    if(regmode == 1)
-    {
 
-        if(ZWImgData.FingerCount == 2)
-        {
-            if(ZWImgData.FingerEdge == -1)
-            {
+        // Cek kualitas sidik jari (quality)
+        if (Detail.quality < 30) {
+            issucc = false;
+        }
+    }
+
+    if (regmode == 1) {
+        if (ZWImgData.FingerCount == 2) {
+            // Validasi jarak tepi
+            if (ZWImgData.FingerEdge == -1) {
                 emit mythis->signal_settip("Fingers are too close to the left edge");
                 return 0;
-            }
-            else if(ZWImgData.FingerEdge == -2)
-            {
+            } else if (ZWImgData.FingerEdge == -2) {
                 emit mythis->signal_settip("Fingers are too close to the right edge");
                 return 0;
-            }
-            else if(ZWImgData.FingerEdge == -3)
-            {
+            } else if (ZWImgData.FingerEdge == -3) {
                 emit mythis->signal_settip("Fingers are too close to the upper edge");
                 return 0;
             }
-            if(issucc)
-            {
 
-                QJsonArray fingerDataArray;
-                for(int i = 0;i < ZWImgData.FingerCount;i++)
-                {
-                   // ZWFingerDetail Detail = ZWImgData.FingerDetails[i];
-                    QImage image((const unsigned char *)ZWImgData.FingerDetails[i].Buffer, 400, 500, QImage::Format_Grayscale8);
+            // Jika kualitas baik, lanjutkan dengan pemrosesan
+            if (issucc) {
+                for (int i = 0; i < ZWImgData.FingerCount; i++) {
+                    ZWFingerDetail Detail = ZWImgData.FingerDetails[i];
+
+                    // Membaca dan menyimpan gambar sidik jari
+                    QImage image((const unsigned char *)Detail.Buffer, 400, 500, QImage::Format_Grayscale8);
                     QString imagename = QString("./fingerimage/thumb_%1.jpg").arg(QString::number(i));
                     image.save(imagename);
 
                     QString base64String = imageToBase64(image);
+                  //  qDebug() << "hasil base 64" << base64String;
 
-
-                    qDebug() << "hasil base 64" << base64String;
-
+                    // Menyimpan base64 string ke file
                     QString base64FileName = QString("./fingerimage/thumb_%1.txt").arg(QString::number(i));
                     QFile base64File(base64FileName);
-                    if (base64File.open(QIODevice::WriteOnly | QIODevice::Text))
-                    {
+                    if (base64File.open(QIODevice::WriteOnly | QIODevice::Text)) {
                         QTextStream out(&base64File);
                         out << base64String;  // Simpan string Base64 ke file
                         base64File.close();
-                    }
-                    else
-                    {
+                    } else {
                         qDebug() << "Failed to open file for writing Base64:" << base64FileName;
                     }
+
+                    // Menambahkan data ke fingerDataArray
                     QJsonObject fingerData;
                     fingerData["fingerFile"] = imagename;
                     fingerData["base64Image"] = base64String;
+                    fingerData["quality"] = Detail.quality;  // Menyertakan kualitas sidik jari
+                    fingerData["fingerName"] = QString("thumb_%1").arg(QString::number(i));
                     fingerDataArray.append(fingerData);
-
                 }
+
+                // Simpan gambar mentah
                 QImage image1((const unsigned char *)ZWImgData.Buffer, 1600, 1500, QImage::Format_Grayscale8);
                 image1.save("./fingerimage/raw.jpg");
+
                 emit mythis->signal_settip("Acquisition of two fingers was successful");
                 emit mythis->signal_sendFingerData("thumbFinger success", 0, fingerDataArray);
                 return 1;
             }
-        }
-        else
-        {
+        } else {
             emit mythis->signal_settip("Press both fingers");
         }
     }
+
     else if (regmode == 2)
     {
         if(ZWImgData.FingerCount == 4)
