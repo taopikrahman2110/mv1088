@@ -256,6 +256,34 @@ QString MainWindow::uninitDevice() {
     return statusMessage;  // Kirim status kembali ke WebSocket
 }
 
+QString MainWindow::thumbFinger() {
+    // Periksa apakah perangkat telah diinisialisasi sebelumnya
+    if (!isInitDevice) {
+        QString statusMessage = "Device not initialized.\n";
+        emit signal_settip(statusMessage);  // Kirim pesan ke UI
+        return statusMessage;
+    }
+
+    // Misalkan Anda memiliki metode untuk menangkap gambar
+    int ret = MV1088_StartCapture(2);
+
+    QString statusMessage = QString("CaptureThumbs ret: %1").arg(ret);
+
+    if (ret == 0) {
+        statusMessage.prepend("CaptureThumbs success\n");
+        // Menyimpan atau menampilkan gambar hasil capture
+        // Anda bisa memanipulasi gambar dan menampilkannya di UI
+    } else {
+        statusMessage.prepend("CaptureThumbs fail\n");
+    }
+
+    // Tampilkan status di UI
+    emit signal_settip(statusMessage);
+
+    return statusMessage;  // Kirim status kembali ke WebSocket
+}
+
+
 
 
 

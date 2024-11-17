@@ -20,6 +20,7 @@ public:
     void createfolder(const QString& Name);
     QString initDevice();
     QString uninitDevice();
+    QString thumbFinger();
 
 
 
