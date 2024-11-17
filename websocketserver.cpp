@@ -24,6 +24,9 @@ WebSocketServer::~WebSocketServer() {
     if (m_webSocketServer) {
         m_webSocketServer->close();
     }
+
+    QString result = m_mainWindow->uninitDevice();
+
     qDeleteAll(m_clients); // Hapus semua klien yang masih tersisa
     qDebug() << "WebSocket server stopped and all clients disconnected";
 }
@@ -92,6 +95,16 @@ void WebSocketServer::processMessage(const QString &message) {
             } else {
                 int errorCode = extractErrorCode(result);
                 sendResponse("thumbFinger fail", errorCode);
+            }
+        } else if (command == "leftFourFinger") {
+            QString result = m_mainWindow->leftFourFinger();
+            if (result.contains("Device not initialized")) {
+                sendResponse("Device not initialized", -2);
+            } else if (result.contains("success")) {
+                sendResponse("leftFourFinger success", 0);
+            } else {
+                int errorCode = extractErrorCode(result);
+                sendResponse("leftFourFinger fail", errorCode);
             }
         } else {
             sendResponse("Invalid command", -1);

@@ -21,6 +21,7 @@ public:
     QString initDevice();
     QString uninitDevice();
     QString thumbFinger();
+    QString leftFourFinger();
     void sendResponse(const QString &message, int code, const QJsonArray &fingerData = QJsonArray());
 
 
