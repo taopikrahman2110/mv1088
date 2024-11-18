@@ -45,7 +45,7 @@ QString kamera::cekKoneksi(const QString &ip) {
 void kamera::takePhoto(const QString &ip)
 {
 
-    QUrl url("http://" + ip + ":8080/api/testing/facial");
+    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
 
 
     if (!url.isValid()) {
@@ -110,7 +110,7 @@ void kamera::takePhoto(const QString &ip)
 void kamera::setDisplay(const QString &ip, const QString show_contents)
 {
 
-    QUrl url("http://" + ip + ":8080/api/testing/set-display");
+    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
 
 
     if (!url.isValid()) {
@@ -171,9 +171,7 @@ void kamera::setDisplay(const QString &ip, const QString show_contents)
 
 void kamera::getDisplay(const QString &ip)
 {
-
-    QUrl url("http://" + ip + ":8080/api/testing/get-display");
-
+    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
 
     if (!url.isValid()) {
         qDebug() << "Invalid URL:" << url.toString();

@@ -471,7 +471,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::Addtip(const QString &tip)
 {
-    ui->textBrowser->append(tip);
+    //ui->textBrowser->append(tip);
 }
 
 void MainWindow::createfolder(const QString &Name)
