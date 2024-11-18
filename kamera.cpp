@@ -110,7 +110,7 @@ void kamera::takePhoto(const QString &ip)
 void kamera::setDisplay(const QString &ip, const QString show_contents)
 {
 
-    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
+    QUrl url("http://" + ip + "/facial_api/aiot_call");
 
 
     if (!url.isValid()) {
@@ -121,10 +121,8 @@ void kamera::setDisplay(const QString &ip, const QString show_contents)
 
     QNetworkRequest request(url);
 
-    // Set header for Content-Type as JSON
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // Create JSON payload with parameters
     QJsonObject params;
     params["show_contents"] = show_contents;
 
@@ -171,7 +169,7 @@ void kamera::setDisplay(const QString &ip, const QString show_contents)
 
 void kamera::getDisplay(const QString &ip)
 {
-    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
+    QUrl url("http://" + ip + "/facial_api/aiot_call");
 
     if (!url.isValid()) {
         qDebug() << "Invalid URL:" << url.toString();
