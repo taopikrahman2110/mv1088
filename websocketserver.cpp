@@ -185,7 +185,7 @@ void WebSocketServer::processMessage(const QString &message) {
                 qDebug() << "Camera object not available";
                 sendResponseKamera(QJsonObject(), -1); // Kirim error jika kamera tidak tersedia
             }
-        }else if (command == "setDisplay"){
+        } else if (command == "setDisplay"){
             if (m_kamera) {
                 QString ip = obj["ip"].toString();
                 QString show_contents = obj["show_contents"].toString();
@@ -198,13 +198,19 @@ void WebSocketServer::processMessage(const QString &message) {
             } else {
                 sendResponseKamera(QJsonObject(), -1);  // Jika kamera tidak tersedia
             }
+        } else if (command == "getDisplay"){
+            if (m_kamera) {
+                QString ip = obj["ip"].toString();
+                // Menyambungkan sinyal photoTaken ke slot sendResponseKamera untuk menangani hasil foto
+                disconnect(m_kamera, &kamera::getDisplayed, this, &WebSocketServer::sendResponseKamera);
+                connect(m_kamera, &kamera::getDisplayed, this, &WebSocketServer::sendResponseKamera);
+
+
+                m_kamera->getDisplay(ip);
+            } else {
+                sendResponseKamera(QJsonObject(), -1);  // Jika kamera tidak tersedia
+            }
         }
-
-
-
-
-
-
         else {
             sendResponse("Invalid command", -1);
         }

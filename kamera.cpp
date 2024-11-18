@@ -169,6 +169,67 @@ void kamera::setDisplay(const QString &ip, const QString show_contents)
     });
 }
 
+void kamera::getDisplay(const QString &ip)
+{
+
+    QUrl url("http://" + ip + ":8080/api/testing/get-display");
+
+
+    if (!url.isValid()) {
+        qDebug() << "Invalid URL:" << url.toString();
+        emit getDisplayed(QJsonObject(), -1);  // Emit empty JSON for error
+        return;  // Keluar dari fungsi jika URL tidak valid
+    }
+
+    QNetworkRequest request(url);
+
+    // Set header for Content-Type as JSON
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    // Create JSON payload with parameters
+    QJsonObject params;
+
+    QJsonObject payload;
+    payload["method"] = "get_ui_display_tips";
+    payload["params"] = NULL;
+
+    QJsonDocument doc(payload);
+    QByteArray data = doc.toJson();
+
+    // Kirim POST request menggunakan network manager
+    QNetworkReply *reply = m_networkManager->post(request, data);
+
+    // Handle response ketika selesai
+    connect(reply, &QNetworkReply::finished, [reply, this]() {
+        // Cek error pada reply
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Error occurred: " << reply->errorString();  // Debug error
+            emit getDisplayed(QJsonObject(), -1);  // Emit empty JSON for error
+            reply->deleteLater();
+            return;  // Keluar dari lambda jika terjadi error
+        }
+
+        // Baca data dari reply
+        QByteArray responseBytes = reply->readAll();
+        qDebug() << "Response received: " << responseBytes;  // Debug response
+
+        // Parse response ke QJsonObject
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseBytes);
+        if (!responseDoc.isObject()) {
+            qDebug() << "Invalid JSON response";  // Invalid JSON structure
+            emit getDisplayed(QJsonObject(), -1);  // Emit empty JSON for error
+            reply->deleteLater();
+            return;  // Keluar jika response bukan JSON yang valid
+        }
+
+        // Parse response yang valid
+        QJsonObject responseObj = responseDoc.object();
+        emit getDisplayed(responseObj, 0);  // Emit photoTaken signal dengan response
+        reply->deleteLater();
+        return;
+    });
+}
+
 void kamera::cancelPhoto(const QString &ip)
 {
     // Bangun URL dinamis berdasarkan IP yang diterima
