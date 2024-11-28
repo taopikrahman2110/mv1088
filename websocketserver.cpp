@@ -5,22 +5,85 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QSslConfiguration>
+#include <QSslCertificate>
+#include <QSslKey>
+#include <QFile>
+#include <QDir>
+#include <QCoreApplication>
 
 WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     : QObject(parent),
       m_webSocketServer(new QWebSocketServer(QStringLiteral("My Server"),
-                                             QWebSocketServer::NonSecureMode, this)),
+                                             QWebSocketServer::SecureMode, this)),
       m_mainWindow(mainWindow),
       m_kamera(new kamera(this))
 {
-    if (m_webSocketServer->listen(QHostAddress::Any, 8080)) {
-        qDebug() << "WebSocket server started on port 8080";
+    qDebug() << "SSL Supported:" << QSslSocket::supportsSsl();
+    qDebug() << "SSL Library Version:" << QSslSocket::sslLibraryVersionString();
+    qDebug() << "SSL Build Version:" << QSslSocket::sslLibraryBuildVersionString();
+
+    QString baseDir = QCoreApplication::applicationDirPath();
+
+
+    QString certificatePath = QDir::toNativeSeparators(baseDir + "/certs/device.gakkum.local+1.pem");
+    QString privateKeyPath = QDir::toNativeSeparators(baseDir + "/certs/device.gakkum.local+1-key.pem");
+
+    qDebug() << "Certificate Path:" << certificatePath;
+    qDebug() << "Private Key Path:" << privateKeyPath;
+
+    if (!QFile::exists(certificatePath)) {
+        qWarning() << "Certificate file does not exist at:" << certificatePath;
+        return;
+    }
+    if (!QFile::exists(privateKeyPath)) {
+        qWarning() << "Private key file does not exist at:" << privateKeyPath;
+        return;
+    }
+
+    // Muat sertifikat
+    QFile certFile(certificatePath);
+    if (!certFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open certificate file at:" << certificatePath;
+        return;
+    }
+    QSslCertificate certificate(certFile.readAll(), QSsl::Pem);
+    certFile.close();
+
+    if (certificate.isNull()) {
+        qWarning() << "Failed to load certificate from:" << certificatePath;
+        return;
+    }
+
+    QFile keyFile(privateKeyPath);
+    if (!keyFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "Failed to open private key file at:" << privateKeyPath;
+        return;
+    }
+    QSslKey privateKey(keyFile.readAll(), QSsl::Rsa);
+    keyFile.close();
+
+    if (privateKey.isNull()) {
+        qWarning() << "Failed to load private key from:" << privateKeyPath;
+        return;
+    }
+
+    QSslConfiguration sslConfiguration;
+    sslConfiguration.setLocalCertificate(certificate);
+    sslConfiguration.setPrivateKey(privateKey);
+    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyPeer); // Abaikan validasi untuk testing
+    sslConfiguration.setProtocol(QSsl::TlsV1_2);
+
+    m_webSocketServer->setSslConfiguration(sslConfiguration);
+
+    if (m_webSocketServer->listen(QHostAddress::Any, 8787)) {
+        qDebug() << "WebSocket Secure Server started on wss://localhost:8787";
         connect(m_webSocketServer, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
     } else {
-        qWarning() << "Failed to start WebSocket server on port 8080";
+        qWarning() << "Failed to start WebSocket Secure Server on port 8080";
     }
-}
 
+}
 WebSocketServer::~WebSocketServer() {
     if (m_webSocketServer) {
         m_webSocketServer->close();
