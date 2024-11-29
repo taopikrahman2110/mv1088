@@ -80,7 +80,7 @@ void kamera::takePhoto(const QString &ip)
     connect(reply, &QNetworkReply::finished, [reply, this]() {
         // Cek error pada reply
         if (reply->error() != QNetworkReply::NoError) {
-            qDebug() << "Error occurred: " << reply->errorString();  // Debug error
+            qDebug() << "Error occurred: " << reply->errorString();
             emit photoTaken(QJsonObject(), -1);  // Emit empty JSON for error
             reply->deleteLater();
             return;  // Keluar dari lambda jika terjadi error

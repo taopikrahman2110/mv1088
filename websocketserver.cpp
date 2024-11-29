@@ -24,10 +24,8 @@ WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     qDebug() << "SSL Build Version:" << QSslSocket::sslLibraryBuildVersionString();
 
     QString baseDir = QCoreApplication::applicationDirPath();
-
-
-    QString certificatePath = QDir::toNativeSeparators(baseDir + "/certs/device.gakkum.local+1.pem");
-    QString privateKeyPath = QDir::toNativeSeparators(baseDir + "/certs/device.gakkum.local+1-key.pem");
+    QString certificatePath = QDir::toNativeSeparators(baseDir + "/certs/wildcard-gakkum.local.crt");
+    QString privateKeyPath = QDir::toNativeSeparators(baseDir + "/certs/wildcard-gakkum.local.key");
 
     qDebug() << "Certificate Path:" << certificatePath;
     qDebug() << "Private Key Path:" << privateKeyPath;
@@ -71,19 +69,19 @@ WebSocketServer::WebSocketServer(MainWindow *mainWindow, QObject *parent)
     QSslConfiguration sslConfiguration;
     sslConfiguration.setLocalCertificate(certificate);
     sslConfiguration.setPrivateKey(privateKey);
-    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyPeer); // Abaikan validasi untuk testing
+    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
     sslConfiguration.setProtocol(QSsl::TlsV1_2);
 
     m_webSocketServer->setSslConfiguration(sslConfiguration);
 
-    if (m_webSocketServer->listen(QHostAddress::Any, 8787)) {
-        qDebug() << "WebSocket Secure Server started on wss://localhost:8787";
+    if (m_webSocketServer->listen(QHostAddress::Any, 8080)) {
+        qDebug() << "WebSocket Secure Server started on wss://localhost:8080";
         connect(m_webSocketServer, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
     } else {
         qWarning() << "Failed to start WebSocket Secure Server on port 8080";
     }
-
 }
+
 WebSocketServer::~WebSocketServer() {
     if (m_webSocketServer) {
         m_webSocketServer->close();
