@@ -42,24 +42,19 @@ QString kamera::cekKoneksi(const QString &ip) {
     }
 }
 
-void kamera::takePhoto(const QString &ip)
-{
 
+void kamera::takePhoto(const QString &ip) {
     QUrl url("http://" + ip + ":6002/mvfacial_terminal");
-
 
     if (!url.isValid()) {
         qDebug() << "Invalid URL:" << url.toString();
         emit photoTaken(QJsonObject(), -1);  // Emit empty JSON for error
-        return;  // Keluar dari fungsi jika URL tidak valid
+        return;
     }
 
     QNetworkRequest request(url);
-
-    // Set header for Content-Type as JSON
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // Create JSON payload with parameters
     QJsonObject params;
     params["show_ui"] = 1;
     params["time_out"] = 30;
@@ -73,39 +68,107 @@ void kamera::takePhoto(const QString &ip)
     QJsonDocument doc(payload);
     QByteArray data = doc.toJson();
 
-    // Kirim POST request menggunakan network manager
     QNetworkReply *reply = m_networkManager->post(request, data);
 
-    // Handle response ketika selesai
-    connect(reply, &QNetworkReply::finished, [reply, this]() {
-        // Cek error pada reply
+    connect(reply, &QNetworkReply::finished, [reply, ip, this]() {
         if (reply->error() != QNetworkReply::NoError) {
             qDebug() << "Error occurred: " << reply->errorString();
             emit photoTaken(QJsonObject(), -1);  // Emit empty JSON for error
             reply->deleteLater();
-            return;  // Keluar dari lambda jika terjadi error
+            return;
         }
 
-        // Baca data dari reply
         QByteArray responseBytes = reply->readAll();
-        qDebug() << "Response received: " << responseBytes;  // Debug response
+        qDebug() << "Response received: " << responseBytes;
 
-        // Parse response ke QJsonObject
         QJsonDocument responseDoc = QJsonDocument::fromJson(responseBytes);
         if (!responseDoc.isObject()) {
-            qDebug() << "Invalid JSON response";  // Invalid JSON structure
-            emit photoTaken(QJsonObject(), -1);  // Emit empty JSON for error
+            qDebug() << "Invalid JSON response";
+            emit photoTaken(QJsonObject(), -1);
             reply->deleteLater();
-            return;  // Keluar jika response bukan JSON yang valid
+            return;
         }
 
-        // Parse response yang valid
         QJsonObject responseObj = responseDoc.object();
-        emit photoTaken(responseObj, 0);  // Emit photoTaken signal dengan response
+        qDebug() << "Full response JSON:" << QJsonDocument(responseObj).toJson(QJsonDocument::Indented);
+
+        QJsonObject params = responseObj.value("params").toObject();
+        if (params.isEmpty()) {
+            qDebug() << "Params object is empty";
+            emit photoTaken(QJsonObject(), -1);
+            reply->deleteLater();
+            return;
+        }
+
+        QString imagePath = params.value("image_path").toString();
+        qDebug() << "Extracted image path:" << imagePath;
+
+        if (imagePath.isEmpty()) {
+            qDebug() << "Image path is empty";
+            emit photoTaken(responseObj, 0);
+            reply->deleteLater();
+            return;
+        }
+
+        QString imageUrl = QString("http://%1:80%2").arg(ip).arg(imagePath);
+        qDebug() << "Built image URL:" << imageUrl;
+
+        QUrl validImageUrl(imageUrl);
+        if (!validImageUrl.isValid()) {
+            qDebug() << "Invalid image URL:" << validImageUrl.toString();
+            emit photoTaken(QJsonObject(), -1);
+            reply->deleteLater();
+            return;
+        }
+
+        QNetworkRequest imageRequest(validImageUrl);
+        QNetworkReply *imageReply = m_networkManager->get(imageRequest);
+
+        connect(imageReply, &QNetworkReply::finished, [imageReply, responseObj, this]() {
+            if (imageReply->error() != QNetworkReply::NoError) {
+                qDebug() << "Error fetching image: " << imageReply->errorString();
+                emit photoTaken(QJsonObject(), -1);
+                imageReply->deleteLater();
+                return;
+            }
+
+            QByteArray imageData = imageReply->readAll();
+            qDebug() << "Image data size:" << imageData.size();
+
+            QString base64Image = QString::fromLatin1(imageData.toBase64());
+            qDebug() << "Base64 image string (first 100 chars):" << base64Image.left(100);
+
+            // Tambahkan "image_result" ke dalam "params"
+            QJsonObject params = responseObj.value("params").toObject();
+            params["image_result"] = base64Image;  // Tambahkan key baru untuk Base64
+
+            // Debug params yang telah diperbarui
+            qDebug() << "Updated params JSON:" << QJsonDocument(params).toJson(QJsonDocument::Indented);
+
+            // Masukkan kembali params yang diperbarui ke dalam responseObj
+            responseObj["params"] = params;
+
+            // Debug responseObj yang telah diperbarui
+            qDebug() << "Updated responseObj JSON:" << QJsonDocument(params).toJson(QJsonDocument::Indented);
+
+            // Debug JSON yang dikirimkan melalui emit
+            qDebug() << "JSON sent via emit:" << QJsonDocument(params).toJson(QJsonDocument::Indented);
+
+            emit photoTaken(params, 0);  // Gunakan responseObj yang diperbarui
+            imageReply->deleteLater();
+        });
+
         reply->deleteLater();
-        return;
     });
 }
+
+
+
+
+
+
+
+
 
 void kamera::setDisplay(const QString &ip, const QString show_contents)
 {
@@ -228,8 +291,7 @@ void kamera::getDisplay(const QString &ip)
 
 void kamera::cancelPhoto(const QString &ip)
 {
-    // Bangun URL dinamis berdasarkan IP yang diterima
-    QUrl url("http://" + ip + ":8080/api/testing/facial");
+    QUrl url("http://" + ip + ":6002/mvfacial_terminal");
     if (!url.isValid()) {
         qDebug() << "Invalid URL:" << url.toString();
         return;  // Keluar jika URL tidak valid
@@ -240,16 +302,11 @@ void kamera::cancelPhoto(const QString &ip)
     // Set header untuk Content-Type sebagai JSON
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    // Membuat payload JSON untuk parameter
-    QJsonObject params;
-    params["show_ui"] = 1;
-    params["time_out"] = 30;
-
     QJsonObject payload;
     payload["id"] = 1;
     payload["jsonrpc"] = "2.0";
     payload["method"] = "collect_stop_sync";
-    payload["params"] = params;
+    payload["params"] = NULL;
 
     QJsonDocument doc(payload);
     QByteArray data = doc.toJson();
@@ -262,40 +319,7 @@ void kamera::cancelPhoto(const QString &ip)
 
 void kamera::getPhoto(const QString &path, const QString ip)
 {
-    // URL endpoint dengan path yang disertakan
-    QUrl url("http://" + ip + ":8080/api/testing/image/" + path );
-    if (!url.isValid()) {
-        qDebug() << "Invalid URL:" << url.toString();
-        emit photoFetched(QByteArray(), -1); // Emit error jika URL tidak valid
-        return;
-    }
 
-    QNetworkRequest request(url);
-
-    // Set header untuk Content-Type sebagai JSON (sesuai API server)
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    // Kirim GET request
-    QNetworkReply *reply = m_networkManager->get(request);
-
-    // Handle respons
-    connect(reply, &QNetworkReply::finished, [reply, this]() {
-        // Cek error
-        if (reply->error() != QNetworkReply::NoError) {
-            qDebug() << "Error fetching photo:" << reply->errorString();
-            emit photoFetched(QByteArray(), -1); // Emit error jika gagal
-            reply->deleteLater();
-            return;
-        }
-
-        // Ambil data biner dari respons
-        QByteArray imageData = reply->readAll();
-        qDebug() << "Photo fetched successfully, size:" << imageData.size();
-
-        // Emit data gambar yang berhasil diambil
-        emit photoFetched(imageData, 0); // Emit gambar ke signal
-        reply->deleteLater();
-    });
 }
 
 
